@@ -110,6 +110,29 @@ v0.48.0`, etc.). All five key import packages — `components-go-sdk`,
 was required**; the 2023 SDK is source-compatible with the 2026 gRPC. Module pinned to `go 1.24`
 (MVS raised it to `1.24.0`).
 
+## D11. Upgrade components-contrib and dapr/dapr to latest
+
+**Decision**: Upgrade `github.com/dapr/components-contrib` to **v1.18.0** and
+`github.com/dapr/dapr` to **v1.18.1** (both latest), keeping `components-go-sdk` at v0.3.0.
+
+**Rationale**: Aligns the state-contract types and pluggable gRPC proto with the daprd runtime
+we deploy against (1.18.1), rather than the 2023 (1.11-era) snapshot the SDK originally pinned.
+Despite the SDK being unchanged since 2023, its `state/v1` embed of `contribState.Store` and its
+proto usage **compile and run cleanly** against the 1.18 dependencies.
+
+**Verified (2026-06-18)**: After the bump — `go build ./...`, `go vet ./...`, unit tests,
+`golangci-lint`, and the conformance harness compile all pass. Runtime re-verified with daprd
+**1.18.1**: the component registers (`dapr.proto.components.v1.StateStore`), loads
+(`Component loaded: ydb-state (state.ydb/v1)`), `Init` connects to YDB, `/v1.0/healthz` returns
+204, and stubbed ops surface the honest `not implemented` error through the full stack.
+
+**Consequence**: minimum Go rose **1.24 → 1.26.4** (driven by `dapr/dapr` v1.18 / `dapr/kit`
+v0.18); gRPC `v1.78.0 → v1.80.0`. The Go toolchain auto-downloads 1.26.4 as needed.
+
+**Alternatives considered**: Staying on the 1.11-era pin (rejected — drifts from the runtime and
+forgoes newer contrib fixes); also moving `components-go-sdk` to `main` (deferred — no released
+tag, and v0.3.0 already works against 1.18, so the extra risk is unwarranted for now).
+
 ## D7. Storage schema & semantics (design intent for later features)
 
 **Decision**: Single key/value table — `key Utf8` PK, `value String` (opaque bytes),

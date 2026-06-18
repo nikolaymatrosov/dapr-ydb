@@ -16,17 +16,20 @@ scaffold advertises **no** capabilities it does not implement (constitution Prin
 
 ## Technical Context
 
-**Language/Version**: Go 1.24+ (toolchain present: go1.26.1). Floor is dictated by
-`ydb-go-sdk/v3` which requires Go 1.24.
+**Language/Version**: Go **1.26.4+** (toolchain auto-downloads as needed). Floor is dictated by
+`dapr/dapr` v1.18 / `dapr/kit` v0.18 after the dependency upgrade (see research D6/D11).
 
 **Primary Dependencies**:
 - `github.com/dapr-sandbox/components-go-sdk` (pluggable host; latest tag **v0.3.0**) — provides
   `dapr.Register(...)`, `dapr.WithStateStore(...)`, `dapr.MustRun()`, and the
-  `components-go-sdk/state/v1` interface that embeds contrib's `state.Store`.
-- `github.com/dapr/components-contrib/state` (the `state.Store` contract types) — version is
-  transitively pinned by the SDK (Dapr 1.11-era, `v1.11.3-0.2023...`).
-- `github.com/ydb-platform/ydb-go-sdk/v3` (YDB client; latest **v3.140.x**) for the connection
-  pool opened in `Init`.
+  `components-go-sdk/state/v1` interface that embeds contrib's `state.Store`. Although unchanged
+  since 2023, it compiles and runs cleanly against the upgraded contrib/dapr (verified).
+- `github.com/dapr/components-contrib/state` (the `state.Store` contract types) — upgraded to
+  **v1.18.0** (latest), aligning with the daprd runtime.
+- `github.com/dapr/dapr` (pluggable gRPC proto) — upgraded to **v1.18.1**, matching the daprd
+  runtime version exactly.
+- `github.com/ydb-platform/ydb-go-sdk/v3` (YDB client; **v3.140.2**) for the connection pool
+  opened in `Init`.
 
 **Storage**: YDB (Yandex Database). Local dev/test via a YDB container; production via remote/
 serverless YDB over `grpcs://`.
