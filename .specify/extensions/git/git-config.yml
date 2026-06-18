@@ -5,58 +5,63 @@
 branch_numbering: sequential
 
 # Commit message used by `git commit` during repository initialization
-init_commit_message: "[Spec Kit] Initial commit"
+init_commit_message: "chore: scaffold spec-kit project"
 
 # Auto-commit before/after core commands.
 # Set "default" to enable for all commands, then override per-command.
 # Each key can be true/false. Message is customizable per-command.
+#
+# Messages follow Conventional Commits (https://www.conventionalcommits.org).
+# The "{feature}" placeholder is replaced with the current feature slug
+# (the branch name with its numbering prefix stripped, e.g. "project-scaffold"),
+# so each commit names the feature it belongs to.
 auto_commit:
   default: false
   before_clarify:
     enabled: false
-    message: "[Spec Kit] Save progress before clarification"
+    message: "chore(wip): save progress before clarifying {feature}"
   before_plan:
     enabled: false
-    message: "[Spec Kit] Save progress before planning"
+    message: "chore(wip): save progress before planning {feature}"
   before_tasks:
     enabled: false
-    message: "[Spec Kit] Save progress before task generation"
+    message: "chore(wip): save progress before task breakdown for {feature}"
   before_implement:
     enabled: false
-    message: "[Spec Kit] Save progress before implementation"
+    message: "chore(wip): save progress before implementing {feature}"
   before_checklist:
     enabled: false
-    message: "[Spec Kit] Save progress before checklist"
+    message: "chore(wip): save progress before checklist for {feature}"
   before_analyze:
     enabled: false
-    message: "[Spec Kit] Save progress before analysis"
+    message: "chore(wip): save progress before analyzing {feature}"
   before_taskstoissues:
     enabled: false
-    message: "[Spec Kit] Save progress before issue sync"
+    message: "chore(wip): save progress before syncing {feature} to issues"
   after_constitution:
     enabled: false
-    message: "[Spec Kit] Add project constitution"
+    message: "docs(constitution): establish project governing principles"
   after_specify:
     enabled: false
-    message: "[Spec Kit] Add specification"
+    message: "docs(spec): add feature specification for {feature}"
   after_clarify:
     enabled: false
-    message: "[Spec Kit] Clarify specification"
+    message: "docs(spec): resolve open questions for {feature}"
   after_plan:
     enabled: false
-    message: "[Spec Kit] Add implementation plan"
+    message: "docs(plan): add implementation plan for {feature}"
   after_tasks:
     enabled: false
-    message: "[Spec Kit] Add tasks"
+    message: "docs(tasks): break down implementation work for {feature}"
   after_implement:
     enabled: false
-    message: "[Spec Kit] Implementation progress"
+    message: "feat({feature}): implement planned tasks"
   after_checklist:
     enabled: false
-    message: "[Spec Kit] Add checklist"
+    message: "docs(checklist): add review checklist for {feature}"
   after_analyze:
     enabled: false
-    message: "[Spec Kit] Add analysis report"
+    message: "docs(analysis): add cross-artifact consistency report for {feature}"
   after_taskstoissues:
     enabled: false
-    message: "[Spec Kit] Sync tasks to issues"
+    message: "chore(tasks): sync {feature} tasks to GitHub issues"

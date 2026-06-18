@@ -144,10 +144,18 @@ if ($d1 -eq 0 -and $d2 -eq 0 -and -not $untracked) {
 $commandName = $EventName -replace '^after_', '' -replace '^before_', ''
 $phase = if ($EventName -match '^before_') { 'before' } else { 'after' }
 
-# Use custom message if configured, otherwise default
+# Use custom message if configured, otherwise a Conventional Commits default
 if (-not $commitMsg) {
-    $commitMsg = "[Spec Kit] Auto-commit $phase $commandName"
+    $commitMsg = "chore: auto-commit $phase $commandName for {feature}"
 }
+
+# Substitute the {feature} placeholder with the current feature slug:
+# the branch name with any numbering prefix (sequential "001-" or
+# timestamp "YYYYMMDD-HHMMSS-") stripped. Falls back to the branch name.
+$branch = (git rev-parse --abbrev-ref HEAD 2>$null)
+$feature = ($branch -replace '^[0-9]+(-[0-9]+)*-', '').Trim()
+if (-not $feature) { $feature = "the working tree" }
+$commitMsg = $commitMsg -replace '\{feature\}', $feature
 
 # Stage and commit
 # Relax ErrorActionPreference so CRLF warnings on stderr do not terminate,

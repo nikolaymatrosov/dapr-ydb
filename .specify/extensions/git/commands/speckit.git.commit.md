@@ -14,8 +14,9 @@ This command is invoked as a hook after (or before) core commands. It:
 2. Checks `.specify/extensions/git/git-config.yml` for the `auto_commit` section
 3. Looks up the specific event key to see if auto-commit is enabled
 4. Falls back to `auto_commit.default` if no event-specific key exists
-5. Uses the per-command `message` if configured, otherwise a default message
-6. If enabled and there are uncommitted changes, runs `git add .` + `git commit`
+5. Uses the per-command `message` if configured, otherwise a Conventional Commits default
+6. Substitutes the `{feature}` placeholder in the message with the current feature slug (branch name minus its numbering prefix)
+7. If enabled and there are uncommitted changes, runs `git add .` + `git commit`
 
 ## Execution
 
@@ -35,11 +36,13 @@ auto_commit:
   default: false          # Global toggle — set true to enable for all commands
   after_specify:
     enabled: true          # Override per-command
-    message: "[Spec Kit] Add specification"
+    message: "docs(spec): add feature specification for {feature}"
   after_plan:
     enabled: false
-    message: "[Spec Kit] Add implementation plan"
+    message: "docs(plan): add implementation plan for {feature}"
 ```
+
+Messages follow [Conventional Commits](https://www.conventionalcommits.org). The `{feature}` placeholder is replaced at commit time with the current feature slug (the branch name with its numbering prefix stripped, e.g. `project-scaffold`).
 
 ## Graceful Degradation
 

@@ -54,15 +54,17 @@ Configuration is stored in `.specify/extensions/git/git-config.yml`:
 branch_numbering: sequential
 
 # Custom commit message for git init
-init_commit_message: "[Spec Kit] Initial commit"
+init_commit_message: "chore: scaffold spec-kit project"
 
-# Auto-commit per command (all disabled by default)
+# Auto-commit per command (all disabled by default).
+# Messages follow Conventional Commits; "{feature}" is replaced at commit
+# time with the current feature slug (branch name minus its numbering prefix).
 # Example: enable auto-commit after specify
 auto_commit:
   default: false
   after_specify:
     enabled: true
-    message: "[Spec Kit] Add specification"
+    message: "docs(spec): add feature specification for {feature}"
 ```
 
 ## Installation

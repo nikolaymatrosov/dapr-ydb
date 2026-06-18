@@ -26,7 +26,7 @@ if (-not $repoRoot) { $repoRoot = Get-Location }
 Set-Location $repoRoot
 
 # Read commit message from extension config, fall back to default
-$commitMsg = "[Spec Kit] Initial commit"
+$commitMsg = "chore: scaffold spec-kit project"
 $configFile = Join-Path $repoRoot ".specify/extensions/git/git-config.yml"
 if (Test-Path $configFile) {
     foreach ($line in Get-Content $configFile) {

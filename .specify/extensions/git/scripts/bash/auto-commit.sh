@@ -128,10 +128,18 @@ fi
 _command_name=$(echo "$EVENT_NAME" | sed 's/^after_//' | sed 's/^before_//')
 _phase=$(echo "$EVENT_NAME" | grep -q '^before_' && echo 'before' || echo 'after')
 
-# Use custom message if configured, otherwise default
+# Use custom message if configured, otherwise a Conventional Commits default
 if [ -z "$_commit_msg" ]; then
-    _commit_msg="[Spec Kit] Auto-commit ${_phase} ${_command_name}"
+    _commit_msg="chore: auto-commit ${_phase} ${_command_name} for {feature}"
 fi
+
+# Substitute the {feature} placeholder with the current feature slug:
+# the branch name with any numbering prefix (sequential "001-" or
+# timestamp "YYYYMMDD-HHMMSS-") stripped. Falls back to the branch name.
+_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+_feature=$(echo "$_branch" | sed -E 's/^[0-9]+(-[0-9]+)*-//')
+[ -z "$_feature" ] && _feature="the working tree"
+_commit_msg=${_commit_msg//\{feature\}/$_feature}
 
 # Stage and commit
 _git_out=$(git add . 2>&1) || { echo "[specify] Error: git add failed: $_git_out" >&2; exit 1; }
