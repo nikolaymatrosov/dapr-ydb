@@ -4,15 +4,17 @@ A **pluggable [Dapr](https://dapr.io) state store** backed by [YDB](https://ydb.
 (Yandex Database). It runs as its own process and is discovered by the Dapr sidecar over a
 Unix Domain Socket — **no rebuild of `daprd` required**.
 
-> **Status: scaffold.** The component loads in Dapr, validates its configuration, and opens a
-> YDB connection. Persistence operations (`Get`/`Set`/`Delete`, bulk, ETags, TTL, transactions,
-> query) are **stubbed** and delivered by subsequent features. Per the project
-> [constitution](.specify/memory/constitution.md), `Features()` advertises only capabilities
-> that are actually implemented — currently **none**.
+> **Status: Get/Set/Delete with ETag.** The component loads in Dapr, validates its
+> configuration, opens a YDB connection, and **idempotently creates the state table**. It
+> implements real `Get`/`Set`/`Delete` (and bulk via the default bulk store) against the
+> documented KV schema, with **optimistic-concurrency ETag** semantics. Per the project
+> [constitution](.specify/memory/constitution.md), `Features()` advertises only conformance-
+> verified capabilities — currently **`ETag`** only. TTL, transactions, and query are not yet
+> implemented and are **not** advertised.
 
 ## Prerequisites
 
-- Go **1.24+**
+- Go **1.26+**
 - Docker (for a local YDB instance and the conformance suite)
 - Dapr CLI / `daprd` **1.11+** (to load the component)
 - [`golangci-lint`](https://golangci-lint.run) (for `make lint`)
@@ -58,32 +60,48 @@ The store is configured entirely through the component manifest. Every field is 
 Invalid or missing configuration fails `Init` with a message naming the offending field; it
 never crashes the sidecar.
 
+## State operations
+
+| Operation | Behavior |
+|-----------|----------|
+| `Get` | Returns the value (raw bytes) and current ETag, or an empty not-found response. Logically-expired rows (past `expires_at`) are never returned. |
+| `Set` | Unconditional upsert, or optimistic compare-and-set when an ETag is supplied. Every successful write assigns a fresh opaque ETag (random UUID). |
+| `Delete` | Idempotent delete (absent key succeeds), or compare-and-delete when an ETag is supplied. |
+| `BulkGet`/`BulkSet`/`BulkDelete` | Delegated to the single-key operations via the default bulk store. |
+
+**ETag semantics**: a write/delete carrying an ETag that does not match the stored token — including
+a malformed token — is rejected with `state.ETagMismatch` and leaves data unchanged (this matches the
+Dapr conformance suite and the contrib Postgres v2 component). Values are stored and returned as raw
+bytes and are never parsed. The compare-and-set runs in a single YDB serializable transaction.
+
 ## Test
 
 ```bash
 make lint          # golangci-lint
-make test          # unit tests (cmd/, internal/) — no YDB needed
+make test          # unit tests (cmd/, internal/); YDB-backed tests skip if no YDB is reachable
 make conformance   # brings up YDB, runs the Dapr state conformance suite (build tag: conformance)
 ```
 
-The conformance harness ([tests/conformance](tests/conformance)) is wired to Dapr's state
-conformance suite. Because the scaffold advertises no features, it currently skips with a clear
-message; coverage grows as each persistence feature is implemented.
+The conformance harness ([tests/conformance](tests/conformance)) runs Dapr's state conformance
+suite — the basic CRUD scenarios plus the `etag` optimistic-concurrency scenarios — against a real
+YDB container. It is the authoritative gate for the advertised `ETag` capability. Coverage grows as
+each further persistence feature (TTL, transactions, query) is implemented and verified.
 
 ## Project layout
 
 ```text
 cmd/daprd-ydb/      # entrypoint: dapr.Register("ydb", ...) + dapr.MustRun()
-internal/ydbstate/  # YDBStore (state.Store), metadata parsing/validation, errors
+internal/ydbstate/  # YDBStore (state.Store): store.go, operations.go (Get/Set/Delete + CAS),
+                    #   queries.go (YQL), schema.go (idempotent DDL), etag.go, metadata.go
 components/         # sample component manifest
 metadata.yaml       # component metadata schema (documents all config fields)
 tests/conformance/  # Dapr state conformance harness (build tag: conformance)
 deploy/             # docker-compose (local YDB) + Dockerfile
 ```
 
-To add a new state operation, implement it on `YDBStore` in `internal/ydbstate/store.go`,
-advertise its capability in `Features()` **only after** it passes conformance, and update
-`metadata.yaml` if it introduces new configuration.
+To add a new state operation, implement it on `YDBStore` (operation bodies live in
+`internal/ydbstate/operations.go`, YQL in `queries.go`), advertise its capability in `Features()`
+**only after** it passes conformance, and update `metadata.yaml` if it introduces new configuration.
 
 ## License
 

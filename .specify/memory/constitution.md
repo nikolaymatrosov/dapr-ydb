@@ -1,30 +1,32 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: (template) → 1.0.0
-Bump rationale: Initial ratification — first concrete constitution replacing the
-  unfilled template. Establishes the full set of governing principles.
+Version change: 1.0.0 → 1.1.0
+Bump rationale: MINOR — Principle III's ETag obligation is redefined to match the
+  authoritative Dapr state conformance suite (and reference contrib Postgres v2): a
+  malformed/non-matching ETag yields ETagMismatch, not a separate ETagInvalid class.
+  This changes mandatory guidance (the required error kind) without removing or
+  backward-incompatibly redefining any principle, hence MINOR. Discovered during the
+  002-kv-get-set-delete implementation when "bad-etag" was asserted as mismatch.
 
-Modified principles: N/A (initial adoption)
-  - [PRINCIPLE_1_NAME] → I. State Store Contract Fidelity
-  - [PRINCIPLE_2_NAME] → II. Conformance-Verified (NON-NEGOTIABLE)
-  - [PRINCIPLE_3_NAME] → III. Correct Concurrency, Consistency & TTL Semantics
-  - [PRINCIPLE_4_NAME] → IV. Idiomatic, Pluggable YDB Integration
-  - [PRINCIPLE_5_NAME] → V. Observability & Operability
+Modified principles:
+  - III. Correct Concurrency, Consistency & TTL Semantics — ETag bullet updated:
+    malformed ETag → ETagMismatch (was ETagInvalid). ETagInvalid is now optional and
+    only where it does not conflict with a conformance assertion.
 
-Added sections:
-  - Technology & Architecture Constraints (was [SECTION_2_NAME])
-  - Development Workflow & Quality Gates (was [SECTION_3_NAME])
-
+Added sections: None
 Removed sections: None
 
 Templates requiring updates:
-  - ✅ .specify/templates/plan-template.md (Constitution Check is constitution-driven;
-       no hard-coded gates needed — no change required)
+  - ✅ .specify/templates/plan-template.md (Constitution Check is constitution-driven — no change)
   - ✅ .specify/templates/spec-template.md (no constitution-coupled sections — no change)
   - ✅ .specify/templates/tasks-template.md (task categories remain compatible — no change)
 
-Follow-up TODOs: None — all placeholders resolved.
+Downstream artifacts reconciled (002-kv-get-set-delete):
+  - spec.md FR-008, research.md D4, data-model.md, contracts/state-operations.md,
+    plan.md, quickstart.md, tasks.md T014/T015 — all reflect malformed → ETagMismatch.
+
+Follow-up TODOs: None.
 -->
 
 # Dapr Pluggable State Store for YDB Constitution
@@ -63,10 +65,15 @@ and transactional edge cases the runtime depends on. Conformance is the only obj
 ### III. Correct Concurrency, Consistency & TTL Semantics
 
 The component MUST honor the semantics the `state.Store` contract requires:
-- **ETags / optimistic concurrency**: `Set` and `Delete` carry an optional ETag. A mismatch
-  MUST return `state.NewETagError(state.ETagMismatch, ...)`; a malformed ETag MUST return
-  `state.NewETagError(state.ETagInvalid, ...)`. ETags MUST be generated as opaque values
-  (e.g., random UUIDs) and never reused across writes.
+- **ETags / optimistic concurrency**: `Set` and `Delete` carry an optional ETag. Any ETag that does
+  not match the stored token MUST return `state.NewETagError(state.ETagMismatch, ...)` and leave stored
+  data unchanged. This includes a malformed/uninterpretable token: the Dapr state conformance suite
+  supplies a bad token (`"bad-etag"`) and asserts a **mismatch** result, and the reference contrib
+  `state/postgresql/v2` component (which also uses UUID etags) returns mismatch on parse failure;
+  conformance is authoritative (Principle II), so a malformed token is treated as a mismatch, not a
+  separate `ETagInvalid` class. A component MAY still return `state.NewETagError(state.ETagInvalid, ...)`
+  for pre-flight rejection where it does not conflict with a conformance assertion. ETags MUST be
+  generated as opaque values (e.g., random UUIDs) and never reused across writes.
 - **Transactions**: when `actorStateStore: true` / `FeatureTransactional` is advertised,
   `Multi` MUST execute all operations atomically under a single YDB serializable transaction —
   all-or-nothing, with ETag checks enforced inside the transaction.
@@ -142,4 +149,4 @@ justified in the plan's Complexity Tracking section with the simpler alternative
 rejected and why. When this constitution and a downstream template disagree, this constitution
 wins and the template MUST be corrected.
 
-**Version**: 1.0.0 | **Ratified**: 2026-06-18 | **Last Amended**: 2026-06-18
+**Version**: 1.1.0 | **Ratified**: 2026-06-18 | **Last Amended**: 2026-06-18

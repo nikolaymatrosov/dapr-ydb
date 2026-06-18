@@ -1,11 +1,11 @@
 // Package ydbstate implements a Dapr pluggable state store backed by YDB
 // (Yandex Database). It satisfies github.com/dapr/components-contrib/state.Store.
 //
-// This is the project scaffold: the component loads in Dapr, parses and validates
-// its manifest configuration, and opens a YDB connection. Persistence operations
-// (Get/Set/Delete and the richer ETag/TTL/transactional semantics) are stubbed and
-// delivered by subsequent features. Per constitution Principle I, Features()
-// advertises only capabilities that are actually implemented — currently none.
+// The component loads in Dapr, parses and validates its manifest configuration,
+// opens a YDB connection, and ensures the state table exists. It implements real
+// Get/Set/Delete against the documented KV schema with optimistic-concurrency
+// (ETag) semantics. Per constitution Principle I, Features() advertises only
+// capabilities that have been conformance-verified.
 package ydbstate
 
 import (
@@ -61,6 +61,14 @@ func (s *YDBStore) Init(ctx context.Context, meta state.Metadata) error {
 		return fmt.Errorf("failed to open YDB connection: %w", err)
 	}
 	s.driver = driver
+
+	if err := s.ensureTable(ctx); err != nil {
+		// Release the just-opened driver so a failed Init leaves no resources.
+		_ = s.driver.Close(ctx)
+		s.driver = nil
+		return err
+	}
+
 	s.logger.Info("YDB state store initialized", "database", driver.Name(), "table", m.TableName)
 	return nil
 }
@@ -83,11 +91,13 @@ func (s *YDBStore) credentialOptions() ([]ydb.Option, error) {
 	}
 }
 
-// Features advertises the capabilities this component implements. The scaffold
-// implements none yet (constitution Principle I); this list grows feature by
-// feature as persistence semantics are added and conformance-verified.
+// Features advertises the capabilities this component implements. ETag optimistic
+// concurrency is implemented and verified by the Dapr conformance eTag scenarios
+// (which assert both that FeatureETag is advertised and that the behavior is
+// correct), satisfying constitution Principles I & II and FR-010/FR-011. TTL,
+// transactions, and query are not implemented and therefore never advertised here.
 func (s *YDBStore) Features() []state.Feature {
-	return []state.Feature{}
+	return []state.Feature{state.FeatureETag}
 }
 
 // GetComponentMetadata returns the component's metadata schema map (required by
@@ -96,19 +106,22 @@ func (s *YDBStore) GetComponentMetadata() map[string]string {
 	return map[string]string{}
 }
 
-// Get is not implemented in the scaffold.
-func (s *YDBStore) Get(_ context.Context, _ *state.GetRequest) (*state.GetResponse, error) {
-	return nil, errNotImplemented
+// Get returns the stored value and current etag for a key, or an empty response
+// when the key is absent or logically expired.
+func (s *YDBStore) Get(ctx context.Context, req *state.GetRequest) (*state.GetResponse, error) {
+	return s.get(ctx, req)
 }
 
-// Set is not implemented in the scaffold.
-func (s *YDBStore) Set(_ context.Context, _ *state.SetRequest) error {
-	return errNotImplemented
+// Set stores a value under a key (unconditional upsert, or optimistic compare-and-set
+// when the request carries an etag).
+func (s *YDBStore) Set(ctx context.Context, req *state.SetRequest) error {
+	return s.set(ctx, req)
 }
 
-// Delete is not implemented in the scaffold.
-func (s *YDBStore) Delete(_ context.Context, _ *state.DeleteRequest) error {
-	return errNotImplemented
+// Delete removes a key (idempotent, or optimistic compare-and-delete when the
+// request carries an etag).
+func (s *YDBStore) Delete(ctx context.Context, req *state.DeleteRequest) error {
+	return s.del(ctx, req)
 }
 
 // Close releases the YDB driver so the component can be restarted cleanly

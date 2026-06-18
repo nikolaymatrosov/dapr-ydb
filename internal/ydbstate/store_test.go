@@ -1,8 +1,6 @@
 package ydbstate
 
 import (
-	"context"
-	"errors"
 	"testing"
 
 	"github.com/dapr/components-contrib/state"
@@ -22,25 +20,13 @@ func TestNew_ReturnsUsableStore(t *testing.T) {
 	}
 }
 
-func TestFeatures_AdvertisesNothingUnimplemented(t *testing.T) {
+func TestFeatures_AdvertisesOnlyConformanceVerified(t *testing.T) {
 	s := New()
-	if got := s.Features(); len(got) != 0 {
-		t.Fatalf("Features() = %v; scaffold must advertise no capabilities (constitution Principle I)", got)
-	}
-}
-
-func TestStubOperations_ReturnNotImplemented(t *testing.T) {
-	s := New()
-	ctx := context.Background()
-
-	if _, err := s.Get(ctx, &state.GetRequest{Key: "k"}); !errors.Is(err, errNotImplemented) {
-		t.Errorf("Get error = %v; want errNotImplemented", err)
-	}
-	if err := s.Set(ctx, &state.SetRequest{Key: "k"}); !errors.Is(err, errNotImplemented) {
-		t.Errorf("Set error = %v; want errNotImplemented", err)
-	}
-	if err := s.Delete(ctx, &state.DeleteRequest{Key: "k"}); !errors.Is(err, errNotImplemented) {
-		t.Errorf("Delete error = %v; want errNotImplemented", err)
+	got := s.Features()
+	// ETag is advertised only after passing the conformance eTag scenarios; TTL,
+	// transactions, and query remain unadvertised (constitution Principles I & II).
+	if len(got) != 1 || got[0] != state.FeatureETag {
+		t.Fatalf("Features() = %v; want exactly [%v]", got, state.FeatureETag)
 	}
 }
 

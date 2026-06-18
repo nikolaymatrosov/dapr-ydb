@@ -5,6 +5,7 @@ go 1.26.4
 require (
 	github.com/dapr-sandbox/components-go-sdk v0.3.0
 	github.com/dapr/components-contrib v1.18.0
+	github.com/google/uuid v1.6.0
 	github.com/ydb-platform/ydb-go-sdk/v3 v3.140.2
 )
 
@@ -17,7 +18,6 @@ require (
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt/v4 v4.5.2 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/jonboulle/clockwork v0.5.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect

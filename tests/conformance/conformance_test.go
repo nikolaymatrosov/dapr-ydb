@@ -4,10 +4,10 @@
 // It is gated behind the `conformance` build tag and run via `make conformance`,
 // which brings up a local YDB instance first.
 //
-// The scaffold implements no persistence operations and advertises no Features(),
-// so this harness compiles and is fully wired but skips the assertions. As each
-// later feature lands (Get/Set/Delete -> bulk -> ETag -> TTL -> transactions),
-// add its operation to `operations` and remove the skip.
+// The store implements Get/Set/Delete (incl. bulk via the default bulk store) and
+// optimistic-concurrency ETag semantics. The basic CRUD scenarios always run; the
+// "etag" operation enables the optimistic-concurrency scenarios. As later features
+// land (TTL, transactions, query), add their operation key to `operations`.
 package conformance
 
 import (
@@ -32,17 +32,15 @@ func TestYDBStateConformance(t *testing.T) {
 		"authMethod":       "anonymous",
 	}
 
-	// Scaffold baseline: no operations implemented yet, so there is nothing for
-	// the suite to assert. Later features populate `operations` and drop this skip.
-	t.Skip("scaffold: no state operations implemented yet; conformance coverage grows per feature")
-
 	store := ydbstate.New()
 	if err := store.Init(context.Background(), state.Metadata{Base: metadata.Base{Properties: props}}); err != nil {
 		t.Fatalf("Init failed: %v", err)
 	}
 	defer func() { _ = store.Close() }()
 
-	var operations []string // grows as features are implemented and advertised
+	// Basic CRUD scenarios run unconditionally; "etag" enables the optimistic-
+	// concurrency scenarios that gate advertising state.FeatureETag.
+	operations := []string{"etag"}
 	cfg, err := conf.NewTestConfig("ydb", operations, map[string]interface{}{})
 	if err != nil {
 		t.Fatalf("NewTestConfig: %v", err)
