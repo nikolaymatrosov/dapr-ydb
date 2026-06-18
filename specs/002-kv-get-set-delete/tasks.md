@@ -116,6 +116,12 @@ the flip and the green suite land together.
 - [X] T026 Run `go mod tidy` and `make lint` (golangci-lint); resolve findings.
 - [X] T027 Run the [quickstart.md](quickstart.md) end-to-end (build → unit → conformance → gate verification) and confirm all done-criteria pass.
 
+### Post-analysis gap closure (`/speckit-analyze` follow-up)
+
+- [X] T028 [C1] Update `metadata.yaml` `capabilities` to `["crud", "etag"]` so the manifest matches `Features()` (constitution Dev-Workflow doc gate). Previously `[]` with a stale "scaffold" comment.
+- [X] T029 [G1] Add `TestIntegration_ExpiryFilteredOnRead` in `operations_test.go`: seeds rows with past/future `expires_at` directly (via `seedWithExpiry`) and asserts the expired row reads as not-found while the future one is returned (FR-009/SC-005 — previously implemented but untested).
+- [X] T030 [G2] Add `TestIntegration_ContextCancellationReturnsError` and `TestIntegration_OperationsAfterCloseReturnError`: pre-cancelled context and post-`Close` operations return errors and never panic (FR-012/SC-006).
+
 ---
 
 ## Dependencies & Execution Order

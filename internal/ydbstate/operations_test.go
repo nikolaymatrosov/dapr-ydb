@@ -6,9 +6,12 @@ import (
 	"os"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/dapr/components-contrib/metadata"
 	"github.com/dapr/components-contrib/state"
+	ydb "github.com/ydb-platform/ydb-go-sdk/v3"
+	"github.com/ydb-platform/ydb-go-sdk/v3/query"
 )
 
 // marshalValue is pure and needs no database: []byte is stored verbatim, everything
@@ -217,4 +220,87 @@ func TestIntegration_ConcurrentCASAtMostOneWinner(t *testing.T) {
 	if wins != 1 || mismatch != writers-1 { // SC-004
 		t.Errorf("concurrent CAS: wins=%d mismatch=%d; want wins=1 mismatch=%d", wins, mismatch, writers-1)
 	}
+}
+
+// seedWithExpiry inserts a row with an explicit expires_at (the public Set API never
+// writes expiry — this feature only reads/filters it), so the read filter can be
+// exercised directly.
+func (s *YDBStore) seedWithExpiry(ctx context.Context, t *testing.T, key string, exp time.Time) {
+	t.Helper()
+	params := ydb.ParamsBuilder().
+		Param("$key").Text(key).
+		Param("$value").Bytes([]byte("v")).
+		Param("$etag").Text(newETag()).
+		Param("$exp").Timestamp(exp).
+		Build()
+	sql := "DECLARE $key AS Utf8;\nDECLARE $value AS String;\nDECLARE $etag AS Utf8;\nDECLARE $exp AS Timestamp;\n" +
+		"UPSERT INTO `" + s.md.TableName + "` (key, value, etag, expires_at) VALUES ($key, $value, $etag, $exp);"
+	if err := s.driver.Query().Exec(ctx, sql, query.WithParameters(params)); err != nil {
+		t.Fatalf("seed insert: %v", err)
+	}
+}
+
+func TestIntegration_ExpiryFilteredOnRead(t *testing.T) {
+	s := newTestStore(t)
+	ctx := context.Background()
+	expiredKey := uniqueKey(t, "expired")
+	futureKey := uniqueKey(t, "future")
+	t.Cleanup(func() {
+		_ = s.Delete(ctx, &state.DeleteRequest{Key: expiredKey})
+		_ = s.Delete(ctx, &state.DeleteRequest{Key: futureKey})
+	})
+
+	s.seedWithExpiry(ctx, t, expiredKey, time.Now().Add(-time.Hour)) // logically expired
+	s.seedWithExpiry(ctx, t, futureKey, time.Now().Add(time.Hour))   // not yet expired
+
+	// FR-009 / SC-005: an expired row is reported not-found even before purge.
+	got, err := s.Get(ctx, &state.GetRequest{Key: expiredKey})
+	if err != nil {
+		t.Fatalf("Get expired: %v", err)
+	}
+	if len(got.Data) != 0 || got.ETag != nil {
+		t.Errorf("expired row returned %+v; want not-found", got)
+	}
+
+	// Sanity: a non-expired row IS returned (the filter isn't dropping everything).
+	got, err = s.Get(ctx, &state.GetRequest{Key: futureKey})
+	if err != nil {
+		t.Fatalf("Get future: %v", err)
+	}
+	if string(got.Data) != "v" {
+		t.Errorf("non-expired row not returned: %+v", got)
+	}
+}
+
+func TestIntegration_ContextCancellationReturnsError(t *testing.T) {
+	s := newTestStore(t)
+	key := uniqueKey(t, "cancel")
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // pre-cancelled
+
+	// FR-012 / SC-006: operations surface the cancellation as an error, never panic.
+	if _, err := s.Get(ctx, &state.GetRequest{Key: key}); err == nil {
+		t.Error("Get with cancelled ctx returned nil error; want error")
+	}
+	if err := s.Set(ctx, &state.SetRequest{Key: key, Value: []byte("v")}); err == nil {
+		t.Error("Set with cancelled ctx returned nil error; want error")
+	}
+	if err := s.Delete(ctx, &state.DeleteRequest{Key: key}); err == nil {
+		t.Error("Delete with cancelled ctx returned nil error; want error")
+	}
+}
+
+func TestIntegration_OperationsAfterCloseReturnError(t *testing.T) {
+	s := newTestStore(t)
+	ctx := context.Background()
+	if err := s.Close(); err != nil {
+		t.Fatalf("Close: %v", err)
+	}
+
+	// FR-012 / SC-006: with the backend connection gone, operations degrade to an
+	// error rather than panicking or leaking.
+	if _, err := s.Get(ctx, &state.GetRequest{Key: uniqueKey(t, "closed")}); err == nil {
+		t.Error("Get after Close returned nil error; want error")
+	}
+	s.driver = nil // prevent a double-close in newTestStore's cleanup
 }

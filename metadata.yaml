@@ -8,7 +8,12 @@ version: v1
 status: alpha
 title: "YDB"
 description: "Pluggable Dapr state store backed by YDB (Yandex Database)."
-capabilities: []   # scaffold advertises NO features yet (Principle I); grows per feature
+# Advertised capabilities — MUST match YDBStore.Features() (constitution Principles I & II).
+# 'crud' = Get/Set/Delete; 'etag' = optimistic concurrency (conformance-verified).
+# transactional / ttl / query / actorStateStore are not yet implemented and intentionally absent.
+capabilities:
+  - crud
+  - etag
 metadata:
   - name: connectionString
     required: true
