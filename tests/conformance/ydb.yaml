@@ -1,0 +1,16 @@
+# Component config used by the conformance harness (tests/conformance).
+# Points at the local YDB instance from deploy/docker-compose.yml.
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: ydb-conformance
+spec:
+  type: state.ydb
+  version: v1
+  metadata:
+    - name: connectionString
+      value: "grpc://localhost:2136/local"
+    - name: authMethod
+      value: "anonymous"
+    - name: tableName
+      value: "dapr_conformance"

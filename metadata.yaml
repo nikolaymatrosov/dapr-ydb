@@ -1,0 +1,61 @@
+# Component metadata manifest for the pluggable YDB state store.
+# Documents EVERY field Init reads (constitution Principle V, spec FR-007).
+# Keep in sync with internal/ydbstate/metadata.go.
+schemaVersion: v1
+type: state
+name: ydb
+version: v1
+status: alpha
+title: "YDB"
+description: "Pluggable Dapr state store backed by YDB (Yandex Database)."
+capabilities: []   # scaffold advertises NO features yet (Principle I); grows per feature
+metadata:
+  - name: connectionString
+    required: true
+    sensitive: false
+    description: "YDB DSN: grpc[s]://<endpoint>/<database-path>."
+    example: "grpcs://ydb.serverless.yandexcloud.net:2135/ru-central1/b1g.../etn..."
+    type: string
+  - name: tableName
+    required: false
+    description: "Name of the YDB table backing the key/value store."
+    default: "dapr_state"
+    example: "dapr_state"
+    type: string
+  - name: authMethod
+    required: false
+    description: "Authentication mode. NOTE: 'serviceAccountKey' and 'metadata' are documented but not yet wired in this build (they require the ydb-go-yc integration, a later feature)."
+    default: "anonymous"
+    example: "static"
+    allowedValues:
+      - anonymous
+      - static
+      - token
+      - serviceAccountKey
+      - metadata
+    type: string
+  - name: username
+    required: false   # required when authMethod=static
+    description: "Static-credentials username (required when authMethod=static)."
+    type: string
+  - name: password
+    required: false   # required when authMethod=static
+    sensitive: true
+    description: "Static-credentials password (required when authMethod=static)."
+    type: string
+  - name: accessToken
+    required: false   # required when authMethod=token
+    sensitive: true
+    description: "IAM/access token (required when authMethod=token)."
+    type: string
+  - name: serviceAccountKeyPath
+    required: false   # required when authMethod=serviceAccountKey
+    description: "Path to a Yandex Cloud service-account key file (required when authMethod=serviceAccountKey). Not yet wired in this build."
+    example: "/var/run/secrets/ydb/sa-key.json"
+    type: string
+  - name: useInternalCA
+    required: false
+    description: "Append Yandex Cloud internal root CAs to the TLS trust store."
+    default: "false"
+    example: "true"
+    type: bool

@@ -101,6 +101,15 @@ that aligns with a compatible gRPC; (b) add targeted `replace`/`exclude` directi
 last resort, vendor or fork the small SDK shim. This risk is surfaced as an explicit early
 build task in tasks.md.
 
+**✅ RESOLVED (2026-06-18, task T002)**: The spike assembled the module with both SDKs.
+MVS upgraded `google.golang.org/grpc` v1.54.0 → **v1.78.0** and `google.golang.org/protobuf`
+v1.30.0 → **v1.36.10** (plus `ydb-go-sdk/v3 v3.140.2`, `ydb-go-genproto`, `golang.org/x/net
+v0.48.0`, etc.). All five key import packages — `components-go-sdk`,
+`components-go-sdk/state/v1`, `components-contrib/state`, `ydb-go-sdk/v3`, and
+`ydb-go-sdk/v3/query` — **compile cleanly** against the bumped gRPC/protobuf. **No mitigation
+was required**; the 2023 SDK is source-compatible with the 2026 gRPC. Module pinned to `go 1.24`
+(MVS raised it to `1.24.0`).
+
 ## D7. Storage schema & semantics (design intent for later features)
 
 **Decision**: Single key/value table — `key Utf8` PK, `value String` (opaque bytes),

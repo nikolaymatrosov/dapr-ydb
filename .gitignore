@@ -1,0 +1,29 @@
+# Binaries
+/bin/
+*.exe
+*.test
+*.out
+
+# Vendor (we use modules, not vendoring)
+/vendor/
+
+# Coverage
+coverage.txt
+coverage.out
+*.cover
+
+# Local env / secrets
+.env
+.env.*
+*.key
+sa-key.json
+
+# Dapr component sockets (if created in-tree)
+*.sock
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/

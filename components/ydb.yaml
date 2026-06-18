@@ -1,0 +1,17 @@
+# Sample Dapr component manifest for the pluggable YDB state store.
+# Place this in the resources/components directory that daprd loads.
+# spec.type = "state." + the socket name registered in cmd/daprd-ydb/main.go ("ydb").
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: ydb-state
+spec:
+  type: state.ydb
+  version: v1
+  metadata:
+    - name: connectionString
+      value: "grpc://localhost:2136/local"
+    - name: authMethod
+      value: "anonymous"
+    # - name: tableName
+    #   value: "dapr_state"
