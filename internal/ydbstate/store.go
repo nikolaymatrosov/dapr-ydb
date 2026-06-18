@@ -16,6 +16,7 @@ import (
 
 	"github.com/dapr/components-contrib/state"
 	ydb "github.com/ydb-platform/ydb-go-sdk/v3"
+	yc "github.com/ydb-platform/ydb-go-yc"
 )
 
 // YDBStore is the pluggable Dapr state store backed by YDB.
@@ -73,22 +74,42 @@ func (s *YDBStore) Init(ctx context.Context, meta state.Metadata) error {
 	return nil
 }
 
-// credentialOptions maps the configured authMethod to a YDB driver option.
+// credentialOptions maps the configured authMethod to a base YDB credential
+// option, then layers on the internal-CA trust option when requested. The
+// Yandex Cloud production paths (serviceAccountKey, metadata) are wired via the
+// ydb-go-yc helper module, which acquires and auto-refreshes IAM tokens.
 func (s *YDBStore) credentialOptions() ([]ydb.Option, error) {
+	var base ydb.Option
 	switch s.md.AuthMethod {
 	case authAnonymous:
-		return []ydb.Option{ydb.WithAnonymousCredentials()}, nil
+		base = ydb.WithAnonymousCredentials()
 	case authStatic:
-		return []ydb.Option{ydb.WithStaticCredentials(s.md.Username, s.md.Password)}, nil
+		base = ydb.WithStaticCredentials(s.md.Username, s.md.Password)
 	case authToken:
-		return []ydb.Option{ydb.WithAccessTokenCredentials(s.md.AccessToken)}, nil
+		base = ydb.WithAccessTokenCredentials(s.md.AccessToken)
 	case authSAKey:
-		return nil, fmt.Errorf("authMethod %q is not yet supported in this build (requires the ydb-go-yc integration, a later feature)", s.md.AuthMethod)
+		// Pre-flight the key file so a missing or unreadable path fails Init with
+		// a field-named error before any network call (FR-005). The key itself is
+		// parsed and exchanged for tokens lazily by the YC SDK at connect time.
+		if _, err := os.ReadFile(s.md.ServiceAccountKeyPath); err != nil {
+			return nil, fmt.Errorf("metadata field 'serviceAccountKeyPath': cannot read key file %q: %w", s.md.ServiceAccountKeyPath, err)
+		}
+		base = yc.WithServiceAccountKeyFileCredentials(s.md.ServiceAccountKeyPath)
 	case authMetadata:
-		return nil, fmt.Errorf("authMethod %q is not yet supported in this build (requires the ydb-go-yc-metadata integration, a later feature)", s.md.AuthMethod)
+		// Secret-less: credentials come from the instance metadata service of the
+		// Yandex Cloud workload this process runs on (FR-002).
+		base = yc.WithMetadataCredentials()
 	default:
 		return nil, fmt.Errorf("unsupported authMethod %q", s.md.AuthMethod)
 	}
+
+	opts := []ydb.Option{base}
+	// useInternalCA is orthogonal to the auth method: managed YDB endpoints present
+	// certificates that chain to the Yandex Cloud internal CA (FR-007).
+	if s.md.UseInternalCA {
+		opts = append(opts, yc.WithInternalCA())
+	}
+	return opts, nil
 }
 
 // Features advertises the capabilities this component implements. ETag optimistic

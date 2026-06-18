@@ -92,4 +92,37 @@ func TestParseMetadata_InvalidAuthMethod(t *testing.T) {
 	if !strings.Contains(err.Error(), "authMethod") {
 		t.Errorf("error %q must name the field 'authMethod'", err)
 	}
+	// FR-010: the rejection lists the full set of accepted values, including the
+	// two Yandex Cloud production methods.
+	for _, want := range []string{"anonymous", "static", "token", "serviceAccountKey", "metadata"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error %q must list accepted value %q", err, want)
+		}
+	}
+}
+
+func TestParseMetadata_ServiceAccountKeyRequiresPath(t *testing.T) {
+	_, err := parseAndValidateMetadata(newMeta(map[string]string{
+		"connectionString": "grpcs://ydb.example:2135/db",
+		"authMethod":       "serviceAccountKey",
+	}))
+	if err == nil {
+		t.Fatal("expected error for serviceAccountKey auth without serviceAccountKeyPath")
+	}
+	if !strings.Contains(err.Error(), "serviceAccountKeyPath") {
+		t.Errorf("error %q must name the missing field 'serviceAccountKeyPath'", err)
+	}
+}
+
+func TestParseMetadata_MetadataNeedsNoSecret(t *testing.T) {
+	m, err := parseAndValidateMetadata(newMeta(map[string]string{
+		"connectionString": "grpcs://ydb.example:2135/db",
+		"authMethod":       "metadata",
+	}))
+	if err != nil {
+		t.Fatalf("metadata auth requires no secret, but got error: %v", err)
+	}
+	if m.AuthMethod != authMetadata {
+		t.Errorf("AuthMethod = %q; want metadata", m.AuthMethod)
+	}
 }

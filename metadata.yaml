@@ -29,7 +29,7 @@ metadata:
     type: string
   - name: authMethod
     required: false
-    description: "Authentication mode. NOTE: 'serviceAccountKey' and 'metadata' are documented but not yet wired in this build (they require the ydb-go-yc integration, a later feature)."
+    description: "Authentication mode. 'serviceAccountKey' (key file) and 'metadata' (instance metadata service) are the Yandex Cloud production paths and acquire auto-refreshed IAM tokens."
     default: "anonymous"
     example: "static"
     allowedValues:
@@ -55,7 +55,7 @@ metadata:
     type: string
   - name: serviceAccountKeyPath
     required: false   # required when authMethod=serviceAccountKey
-    description: "Path to a Yandex Cloud service-account key file (required when authMethod=serviceAccountKey). Not yet wired in this build."
+    description: "Path to a Yandex Cloud service-account key file (required when authMethod=serviceAccountKey)."
     example: "/var/run/secrets/ydb/sa-key.json"
     type: string
   - name: useInternalCA

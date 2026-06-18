@@ -7,6 +7,7 @@ require (
 	github.com/dapr/components-contrib v1.18.0
 	github.com/google/uuid v1.6.0
 	github.com/ydb-platform/ydb-go-sdk/v3 v3.140.2
+	github.com/ydb-platform/ydb-go-yc v0.12.4
 )
 
 require (
@@ -30,11 +31,14 @@ require (
 	github.com/spf13/cast v1.8.0 // indirect
 	github.com/stretchr/testify v1.11.1 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
+	github.com/yandex-cloud/go-genproto v0.0.0-20240819112322-98a264d392f6 // indirect
 	github.com/ydb-platform/ydb-go-genproto v0.0.0-20260428144813-1c07baab7f7b // indirect
+	github.com/ydb-platform/ydb-go-yc-metadata v0.6.1 // indirect
 	golang.org/x/net v0.55.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/sys v0.45.0 // indirect
 	golang.org/x/text v0.37.0 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20260401024825-9d38bb4040a9 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260401024825-9d38bb4040a9 // indirect
 	google.golang.org/grpc v1.80.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
