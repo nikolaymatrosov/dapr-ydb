@@ -26,10 +26,13 @@ Expected: a binary is produced from a clean checkout with no manual steps.
 # Start a local YDB (for Init to connect to)
 docker compose -f deploy/docker-compose.yml up -d ydb
 
-# Run the pluggable component (creates ydb.sock in the sockets folder)
+# Run the pluggable component (creates ydb.sock in the sockets folder).
+# daprd and the Dapr docs use DAPR_COMPONENTS_SOCKETS_FOLDER (plural "COMPONENTS").
+# The component bridges this to the SDK's DAPR_COMPONENT_SOCKETS_FOLDER (singular)
+# automatically, so setting the modern variable below is sufficient.
 export DAPR_COMPONENTS_SOCKETS_FOLDER=/tmp/dapr-components-sockets
 mkdir -p "$DAPR_COMPONENTS_SOCKETS_FOLDER"
-make run            # runs ./bin/daprd-ydb
+make run            # runs ./bin/daprd-ydb (sets both variable names for you)
 
 # In another shell: start daprd pointed at a components dir containing components/ydb.yaml
 daprd --app-id demo --resources-path ./components --dapr-grpc-port 50001

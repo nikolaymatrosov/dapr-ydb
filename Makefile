@@ -21,9 +21,11 @@ conformance: ydb-up
 	go test -tags=conformance -v ./tests/conformance/...
 
 ## run: build and run the component, creating the sockets folder
+## Sets both the modern (plural) and SDK (singular) env vars so a custom folder
+## stays in sync regardless of which name is honored.
 run: build
 	mkdir -p $(SOCKETS_FOLDER)
-	DAPR_COMPONENTS_SOCKETS_FOLDER=$(SOCKETS_FOLDER) ./$(BINARY)
+	DAPR_COMPONENTS_SOCKETS_FOLDER=$(SOCKETS_FOLDER) DAPR_COMPONENT_SOCKETS_FOLDER=$(SOCKETS_FOLDER) ./$(BINARY)
 
 ## ydb-up: start a local YDB instance for tests/dev
 ydb-up:
