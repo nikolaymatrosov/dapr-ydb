@@ -56,7 +56,12 @@ func newTestStore(t *testing.T) *YDBStore {
 		connStr = "grpc://localhost:2136/local"
 	}
 	s := New()
-	err := s.Init(context.Background(), state.Metadata{Base: metadata.Base{Properties: map[string]string{
+	// Bound Init: ydb.Open retries cluster discovery on transient failures (e.g. a
+	// refused connection) and would otherwise block forever against an unreachable
+	// endpoint, hanging the whole suite instead of skipping when no YDB is present.
+	initCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	err := s.Init(initCtx, state.Metadata{Base: metadata.Base{Properties: map[string]string{
 		"connectionString": connStr,
 		"authMethod":       "anonymous",
 	}}})
