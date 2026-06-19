@@ -1,0 +1,73 @@
+# Component metadata manifest for the pluggable YDB output binding.
+# Documents EVERY field Init reads and EVERY operation Invoke supports
+# (constitution Principle V; FR-013). Keep in sync with internal/ydbbinding
+# and the shared connection/auth fields in internal/ydbconfig.
+schemaVersion: v1
+type: bindings
+name: ydb
+version: v1
+status: alpha
+title: "YDB"
+description: "Pluggable Dapr output binding backed by YDB (Yandex Database): run raw YQL via query/exec."
+# binding.output: this is an output binding (Invoke), not an input binding.
+binding:
+  output: true
+  input: false
+  # Operations MUST match YDBBinding.Operations() (constitution Principle I analogue).
+  operations:
+    - name: query
+      description: "Execute a row-returning YQL statement; response data is a JSON array of row objects keyed by column name."
+    - name: exec
+      description: "Execute a non-row-returning YQL statement (DML or DDL); response metadata reports an execution summary."
+# Connection/auth fields are shared with the state.ydb store (internal/ydbconfig)
+# so operators configure credentials identically for both components (FR-012).
+metadata:
+  - name: connectionString
+    required: true
+    sensitive: false
+    description: "YDB DSN: grpc[s]://<endpoint>/<database-path>."
+    example: "grpcs://ydb.serverless.yandexcloud.net:2135/ru-central1/b1g.../etn..."
+    type: string
+  - name: authMethod
+    required: false
+    description: "Authentication mode. 'serviceAccountKey' (key file) and 'metadata' (instance metadata service) are the Yandex Cloud production paths and acquire auto-refreshed IAM tokens."
+    default: "anonymous"
+    example: "static"
+    allowedValues:
+      - anonymous
+      - static
+      - token
+      - serviceAccountKey
+      - metadata
+    type: string
+  - name: username
+    required: false   # required when authMethod=static
+    description: "Static-credentials username (required when authMethod=static)."
+    type: string
+  - name: password
+    required: false   # required when authMethod=static
+    sensitive: true
+    description: "Static-credentials password (required when authMethod=static)."
+    type: string
+  - name: accessToken
+    required: false   # required when authMethod=token
+    sensitive: true
+    description: "IAM/access token (required when authMethod=token)."
+    type: string
+  - name: serviceAccountKeyPath
+    required: false   # required when authMethod=serviceAccountKey
+    description: "Path to a Yandex Cloud service-account key file (required when authMethod=serviceAccountKey)."
+    example: "/var/run/secrets/ydb/sa-key.json"
+    type: string
+  - name: useInternalCA
+    required: false
+    description: "Append Yandex Cloud internal root CAs to the TLS trust store."
+    default: "false"
+    example: "true"
+    type: bool
+# The following fields are supplied per-request in the binding Invoke metadata
+# (not component metadata), documented here for discoverability:
+#   sql       (required) — the YQL statement to execute.
+#   params    (optional) — JSON: an array => positional (?, types inferred);
+#                          an object => named+typed ($name, {"type","value"}).
+#   queryMode (optional, exec only) — data (default) | scheme (DDL) | scripting.

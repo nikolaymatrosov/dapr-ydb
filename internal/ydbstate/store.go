@@ -10,13 +10,13 @@ package ydbstate
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"os"
 
 	"github.com/dapr/components-contrib/state"
 	ydb "github.com/ydb-platform/ydb-go-sdk/v3"
-	yc "github.com/ydb-platform/ydb-go-yc"
+
+	"github.com/nikolaymatrosov/dapr-ydb/internal/ydbconfig"
 )
 
 // YDBStore is the pluggable Dapr state store backed by YDB.
@@ -52,14 +52,9 @@ func (s *YDBStore) Init(ctx context.Context, meta state.Metadata) error {
 	}
 	s.md = m
 
-	opts, err := s.credentialOptions()
+	driver, err := ydbconfig.Open(ctx, m.Config)
 	if err != nil {
 		return err
-	}
-
-	driver, err := ydb.Open(ctx, m.ConnectionString, opts...)
-	if err != nil {
-		return fmt.Errorf("failed to open YDB connection: %w", err)
 	}
 	s.driver = driver
 
@@ -72,44 +67,6 @@ func (s *YDBStore) Init(ctx context.Context, meta state.Metadata) error {
 
 	s.logger.Info("YDB state store initialized", "database", driver.Name(), "table", m.TableName)
 	return nil
-}
-
-// credentialOptions maps the configured authMethod to a base YDB credential
-// option, then layers on the internal-CA trust option when requested. The
-// Yandex Cloud production paths (serviceAccountKey, metadata) are wired via the
-// ydb-go-yc helper module, which acquires and auto-refreshes IAM tokens.
-func (s *YDBStore) credentialOptions() ([]ydb.Option, error) {
-	var base ydb.Option
-	switch s.md.AuthMethod {
-	case authAnonymous:
-		base = ydb.WithAnonymousCredentials()
-	case authStatic:
-		base = ydb.WithStaticCredentials(s.md.Username, s.md.Password)
-	case authToken:
-		base = ydb.WithAccessTokenCredentials(s.md.AccessToken)
-	case authSAKey:
-		// Pre-flight the key file so a missing or unreadable path fails Init with
-		// a field-named error before any network call (FR-005). The key itself is
-		// parsed and exchanged for tokens lazily by the YC SDK at connect time.
-		if _, err := os.ReadFile(s.md.ServiceAccountKeyPath); err != nil {
-			return nil, fmt.Errorf("metadata field 'serviceAccountKeyPath': cannot read key file %q: %w", s.md.ServiceAccountKeyPath, err)
-		}
-		base = yc.WithServiceAccountKeyFileCredentials(s.md.ServiceAccountKeyPath)
-	case authMetadata:
-		// Secret-less: credentials come from the instance metadata service of the
-		// Yandex Cloud workload this process runs on (FR-002).
-		base = yc.WithMetadataCredentials()
-	default:
-		return nil, fmt.Errorf("unsupported authMethod %q", s.md.AuthMethod)
-	}
-
-	opts := []ydb.Option{base}
-	// useInternalCA is orthogonal to the auth method: managed YDB endpoints present
-	// certificates that chain to the Yandex Cloud internal CA (FR-007).
-	if s.md.UseInternalCA {
-		opts = append(opts, yc.WithInternalCA())
-	}
-	return opts, nil
 }
 
 // Features advertises the capabilities this component implements. ETag optimistic

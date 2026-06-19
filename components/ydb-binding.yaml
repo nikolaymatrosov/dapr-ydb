@@ -1,0 +1,16 @@
+# Sample Dapr component manifest for the pluggable YDB output binding.
+# Place this in the resources/components directory that daprd loads.
+# spec.type = "bindings." + the socket name registered in cmd/daprd-ydb/main.go ("ydb").
+# It shares the connection/auth fields with the state.ydb store (see components/ydb.yaml).
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: ydb-sql
+spec:
+  type: bindings.ydb
+  version: v1
+  metadata:
+    - name: connectionString
+      value: "grpc://localhost:2136/local"
+    - name: authMethod
+      value: "anonymous"

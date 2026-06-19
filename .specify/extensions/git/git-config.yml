@@ -54,7 +54,7 @@ auto_commit:
     enabled: false
     message: "docs(tasks): break down implementation work for {feature}"
   after_implement:
-    enabled: false
+    enabled: true
     message: "feat({feature}): implement planned tasks"
   after_checklist:
     enabled: false

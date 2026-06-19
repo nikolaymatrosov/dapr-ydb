@@ -11,8 +11,10 @@ import (
 	"os"
 
 	dapr "github.com/dapr-sandbox/components-go-sdk"
+	bindingsv1 "github.com/dapr-sandbox/components-go-sdk/bindings/v1"
 	state "github.com/dapr-sandbox/components-go-sdk/state/v1"
 
+	"github.com/nikolaymatrosov/dapr-ydb/internal/ydbbinding"
 	"github.com/nikolaymatrosov/dapr-ydb/internal/ydbstate"
 )
 
@@ -28,9 +30,17 @@ const (
 func main() {
 	syncSocketFolderEnv()
 
-	dapr.Register("ydb", dapr.WithStateStore(func() state.Store {
-		return ydbstate.New()
-	}))
+	// One socket ("ydb") serves both component types: the state store
+	// (state.ydb) and the output binding (bindings.ydb). The SDK appends each
+	// onto the same gRPC server, so no extra binary is needed.
+	dapr.Register("ydb",
+		dapr.WithStateStore(func() state.Store {
+			return ydbstate.New()
+		}),
+		dapr.WithOutputBinding(func() bindingsv1.OutputBinding {
+			return ydbbinding.New()
+		}),
+	)
 	dapr.MustRun()
 }
 

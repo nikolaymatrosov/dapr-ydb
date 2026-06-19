@@ -2,7 +2,7 @@ BINARY ?= bin/daprd-ydb
 SOCKETS_FOLDER ?= /tmp/dapr-components-sockets
 COMPOSE ?= docker compose -f deploy/docker-compose.yml
 
-.PHONY: build lint test conformance run clean tidy ydb-up ydb-down
+.PHONY: build lint test conformance binding-integration run clean tidy ydb-up ydb-down
 
 ## build: compile the pluggable component binary
 build:
@@ -19,6 +19,10 @@ test:
 ## conformance: bring up YDB and run the Dapr state conformance suite
 conformance: ydb-up
 	go test -tags=conformance -v ./tests/conformance/...
+
+## binding-integration: bring up YDB and run the output-binding integration tests
+binding-integration: ydb-up
+	go test -tags=integration -v ./tests/integration/...
 
 ## run: build and run the component, creating the sockets folder
 ## Sets both the modern (plural) and SDK (singular) env vars so a custom folder

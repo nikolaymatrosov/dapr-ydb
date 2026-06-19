@@ -6,6 +6,8 @@ import (
 
 	"github.com/dapr/components-contrib/metadata"
 	"github.com/dapr/components-contrib/state"
+
+	"github.com/nikolaymatrosov/dapr-ydb/internal/ydbconfig"
 )
 
 func newMeta(props map[string]string) state.Metadata {
@@ -19,7 +21,7 @@ func TestParseMetadata_ValidAnonymous(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if m.AuthMethod != authAnonymous {
+	if m.AuthMethod != ydbconfig.AuthAnonymous {
 		t.Errorf("AuthMethod = %q; want anonymous (default)", m.AuthMethod)
 	}
 	if m.TableName != defaultTableName {
@@ -122,7 +124,7 @@ func TestParseMetadata_MetadataNeedsNoSecret(t *testing.T) {
 	if err != nil {
 		t.Fatalf("metadata auth requires no secret, but got error: %v", err)
 	}
-	if m.AuthMethod != authMetadata {
+	if m.AuthMethod != ydbconfig.AuthMetadata {
 		t.Errorf("AuthMethod = %q; want metadata", m.AuthMethod)
 	}
 }
